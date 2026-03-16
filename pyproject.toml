@@ -1,0 +1,16 @@
+[project]
+name = "auto-ssh-auther"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "paramiko>=4.0.0",
+    "pyside6>=6.10.2",
+]
+
+[dependency-groups]
+build = [
+    "pillow>=12.1.1",
+    "pyinstaller>=6.19.0",
+]
