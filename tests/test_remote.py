@@ -1,6 +1,6 @@
 import unittest
 
-from auto_ssh_auther.ssh.remote import build_authorized_keys_payload
+from ssh_auther.ssh.remote import build_authorized_keys_payload
 
 
 class BuildAuthorizedKeysPayloadTests(unittest.TestCase):

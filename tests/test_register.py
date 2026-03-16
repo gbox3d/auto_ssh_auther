@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 from paramiko.ssh_exception import BadHostKeyException, NoValidConnectionsError, SSHException
 
-from auto_ssh_auther.services.register import format_connection_error, key_exists_in_content
+from ssh_auther.services.register import format_connection_error, key_exists_in_content
 
 
 class RegisterServiceTests(unittest.TestCase):

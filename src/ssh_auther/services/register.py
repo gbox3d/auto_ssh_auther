@@ -6,8 +6,8 @@ from enum import Enum
 import paramiko
 from paramiko.ssh_exception import BadHostKeyException, NoValidConnectionsError, SSHException
 
-from auto_ssh_auther.keys import PublicKeyInfo
-from auto_ssh_auther.ssh import SSHConnection
+from ssh_auther.keys import PublicKeyInfo
+from ssh_auther.ssh import SSHConnection
 
 
 class RegisterResult(Enum):

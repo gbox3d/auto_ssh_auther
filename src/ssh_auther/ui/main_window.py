@@ -21,9 +21,9 @@ from PySide6.QtWidgets import (
     QFormLayout,
 )
 
-from auto_ssh_auther.app_assets import WINDOW_TITLE, load_app_icon
-from auto_ssh_auther.keys import find_public_keys, PublicKeyInfo, generate_key, delete_key, SUPPORTED_KEY_ALGORITHMS
-from auto_ssh_auther.services.register import register_key, test_connection, RegisterResult
+from ssh_auther.app_assets import WINDOW_TITLE, load_app_icon
+from ssh_auther.keys import find_public_keys, PublicKeyInfo, generate_key, delete_key, SUPPORTED_KEY_ALGORITHMS
+from ssh_auther.services.register import register_key, test_connection, RegisterResult
 
 
 class WorkerThread(QThread):

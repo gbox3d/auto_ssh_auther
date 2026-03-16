@@ -13,7 +13,7 @@ build_icon = project_root / ("icon_ssh_auther.ico" if sys.platform == "win32" el
 
 a = Analysis(
     ['main.py'],
-    pathex=[str(project_root)],
+    pathex=[str(project_root), str(project_root / "src")],
     binaries=[],
     datas=runtime_datas,
     hiddenimports=[],

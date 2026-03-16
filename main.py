@@ -2,8 +2,8 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
-from auto_ssh_auther.app_assets import APP_NAME, WINDOW_TITLE, configure_windows_app_id, load_app_icon
-from auto_ssh_auther.ui.main_window import MainWindow
+from ssh_auther.app_assets import APP_NAME, WINDOW_TITLE, configure_windows_app_id, load_app_icon
+from ssh_auther.ui.main_window import MainWindow
 
 
 def main():
