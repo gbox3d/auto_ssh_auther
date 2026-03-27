@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- `README.md`에 현재 빌드/릴리즈 흐름과 GitHub Release 태그 규칙을 반영
+- 프로젝트 구조 설명을 `src/ssh_auther` 레이아웃에 맞게 수정
+
+### Packaging
+- `build.py`가 PyInstaller 빌드 후 `release/` 아래에 릴리즈용 zip을 생성하도록 변경
+- `.gitignore`에 `release/`를 추가해 패키징 산출물을 버전 관리에서 제외
+- `pyproject.toml`의 의존성 선언 위치와 build-system 구성을 정리해 `uv` 환경과 빌드가 정상 동작하도록 수정
+
 ## 0.1.0
 
 ### Added

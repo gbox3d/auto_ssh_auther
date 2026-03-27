@@ -27,19 +27,33 @@ uv sync
 uv run python main.py
 ```
 
+- `uv sync`: 기본 실행 의존성(`PySide6`, `paramiko`)을 프로젝트 `.venv`에 맞춰 설치
+
 ## 빌드
 
-PyInstaller 기반 빌드 파일은 [`auto_ssh_auther.spec`](/Volumes/data/work/gb_works/auto_ssh_auther/auto_ssh_auther.spec) 와 [`build.py`](/Volumes/data/work/gb_works/auto_ssh_auther/build.py) 로 준비되어 있다.
+PyInstaller 기반 빌드 파일은 `auto_ssh_auther.spec`와 `build.py`로 관리한다.
 
 ```bash
 uv sync --group build
 uv run python build.py
 ```
 
-- 결과물은 `dist/` 아래에 생성된다.
+- `uv sync --group build`: 기본 실행 의존성에 더해 `build` 그룹(`PyInstaller`, `Pillow`)까지 함께 설치
+- 실행 폴더 결과물은 `dist/` 아래에 생성된다.
+- 빌드가 끝나면 릴리즈용 zip은 `release/` 아래에 별도로 생성된다.
+- zip 파일명 형식은 `앱이름_os_구동환경_version.zip` 이다.
+- 예: `auto_ssh_auther_windows_x86_64_0.1.0.zip`
 - 아이콘 파일은 spec에서 자동 포함되므로, `dist`로 별도 복사할 필요가 없다.
 - 런타임 창 아이콘과 실행 파일 아이콘 모두 같은 리소스를 사용한다.
 - Windows, macOS, Linux에서 같은 spec를 사용할 수 있지만, 실행 파일은 각 운영체제에서 직접 빌드해야 한다.
+
+## GitHub 릴리즈
+
+- GitHub Release를 발행하려면 먼저 유효한 git tag가 필요하다.
+- 권장 태그 형식은 `v0.1.0`처럼 `v` 접두사를 붙인 버전명이다.
+- 권장 릴리즈 제목은 `auto_ssh_auther v0.1.0` 형식이다.
+- 릴리즈 asset은 `release/` 아래에서 생성된 zip 파일을 업로드하면 된다.
+- 예: `release/auto_ssh_auther_windows_x86_64_0.1.0.zip`
 
 ## 사용 방법
 
@@ -67,18 +81,21 @@ uv run python build.py
 ```
 auto_ssh_auther/
 ├── auto_ssh_auther.spec   # PyInstaller 빌드 정의
-├── auto_ssh_auther/
-│   ├── app_assets.py      # 아이콘/리소스 경로 및 앱 아이덴티티
-│   ├── keys/
-│   │   └── local_keys.py  # ~/.ssh/*.pub 탐색·파싱·생성·삭제
-│   ├── services/
-│   │   └── register.py    # 키 등록 흐름 제어 (중복 검사 포함)
-│   ├── ssh/
-│   │   └── remote.py      # paramiko 기반 SSH 접속, 원격 파일 조작
-│   └── ui/
-│       └── main_window.py # PySide6 GUI (GenerateKeyDialog 포함)
-├── build.py               # PyInstaller 빌드 실행 스크립트
-main.py                   # 진입점
+├── src/
+│   └── ssh_auther/
+│       ├── app_assets.py      # 아이콘/리소스 경로 및 앱 아이덴티티
+│       ├── keys/
+│       │   └── local_keys.py  # ~/.ssh/*.pub 탐색·파싱·생성·삭제
+│       ├── services/
+│       │   └── register.py    # 키 등록 흐름 제어 (중복 검사 포함)
+│       ├── ssh/
+│       │   └── remote.py      # paramiko 기반 SSH 접속, 원격 파일 조작
+│       └── ui/
+│           └── main_window.py # PySide6 GUI (GenerateKeyDialog 포함)
+├── build.py                   # PyInstaller 빌드 및 release zip 생성 스크립트
+├── main.py                    # 진입점
+├── dist/                      # 실행 폴더 결과물
+└── release/                   # GitHub Release 업로드용 zip 결과물
 ```
 
 ## 의존성
