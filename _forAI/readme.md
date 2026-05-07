@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-`auto_ssh_auther`는 로컬 `~/.ssh` 공개키를 선택해 원격 서버의 `authorized_keys`에 등록하는 PySide6 기반 GUI 데스크톱 앱이다.
+`auto_ssh_auther`는 로컬 `~/.ssh` 공개키를 선택해 원격 서버의 `authorized_keys`에 등록하고, 성공 시 로컬 `~/.ssh/config`까지 자동 반영하는 PySide6 기반 GUI 데스크톱 앱이다.
 
 ## 문서 읽기 순서
 
@@ -22,12 +22,12 @@
 ## 저장소 정보
 
 - 이름: `auto_ssh_auther`
-- 경로: `E:\work\auto_ssh_auther`
+- 경로: `D:\works\auto_ssh_auther`
+- 현재 버전: `0.2.0`
 - 실행 방식: `uv run python main.py`
 - 빌드 방식: `uv sync --group build` 후 `uv run python build.py`
 
 ## 참고
 
-- 실제 사용자용 설명은 [README.md](E:/work/auto_ssh_auther/README.md)에 있다.
+- 실제 사용자용 설명은 [README.md](D:/works/auto_ssh_auther/README.md)에 있다.
 - `_forAI` 문서는 코드 수정 전에 구조와 의도를 빠르게 파악하기 위한 내부 작업 문서다.
-

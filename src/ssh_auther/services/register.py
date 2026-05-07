@@ -8,6 +8,7 @@ from paramiko.ssh_exception import BadHostKeyException, NoValidConnectionsError,
 
 from ssh_auther.keys import PublicKeyInfo
 from ssh_auther.ssh import SSHConnection
+from ssh_auther.ssh.local_config import ensure_host_config, private_key_path_from_public_key
 
 
 class RegisterResult(Enum):
@@ -87,6 +88,21 @@ def key_exists_in_content(key_line: str, content: str) -> bool:
     return False
 
 
+def apply_local_ssh_config(key_info: PublicKeyInfo, host: str, port: int, username: str) -> str:
+    """등록된 키를 사용할 수 있도록 로컬 OpenSSH config를 반영한다."""
+    try:
+        identity_file = private_key_path_from_public_key(key_info.path)
+        update = ensure_host_config(
+            host=host,
+            port=port,
+            username=username,
+            identity_file=identity_file,
+        )
+        return f"로컬 SSH config: {update.status.value} (Host {update.host}, IdentityFile {update.identity_file})"
+    except Exception as exc:
+        return f"경고: 로컬 SSH config 반영 실패: {exc}"
+
+
 def register_key(
     key_info: PublicKeyInfo,
     host: str,
@@ -111,9 +127,13 @@ def register_key(
             return RegisterResult.SUCCESS, "키가 성공적으로 등록되었습니다."
 
         (status, message), warning = run_with_host_trust_fallback(host, port, username, password, operation)
+        messages = []
         if warning:
-            return status, f"{warning}\n{message}"
-        return status, message
+            messages.append(warning)
+        messages.append(message)
+        if status in {RegisterResult.SUCCESS, RegisterResult.ALREADY_EXISTS}:
+            messages.append(apply_local_ssh_config(key_info, host, port, username))
+        return status, "\n".join(messages)
     except Exception as exc:
         return RegisterResult.FAILED, format_connection_error(exc)
 

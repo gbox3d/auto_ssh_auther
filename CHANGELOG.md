@@ -2,7 +2,17 @@
 
 ## Unreleased
 
+## 0.2.0 - 2026-05-06
+
+### Added
+- 원격 공개키 등록 성공 또는 이미 등록된 키일 때 로컬 `~/.ssh/config`를 자동 추가/갱신
+- 로컬 SSH config 반영 대상에 `Host`, `HostName`, `Port`, `User`, `IdentityFile`, `IdentitiesOnly`, `PreferredAuthentications` 적용
+- 로컬 SSH config 신규 추가, 기존 Host 갱신, 변경 없음 상태에 대한 단위 테스트 추가
+- 원격 등록 성공 메시지에 `로컬 SSH config: added/updated/unchanged` 결과를 함께 표시
+
 ### Changed
+- 프로젝트 버전을 `0.2.0`으로 갱신
+- `pyproject.toml` 설명문을 실제 앱 용도에 맞게 수정
 - `README.md`에 현재 빌드/릴리즈 흐름과 GitHub Release 태그 규칙을 반영
 - 프로젝트 구조 설명을 `src/ssh_auther` 레이아웃에 맞게 수정
 
@@ -10,6 +20,9 @@
 - `build.py`가 PyInstaller 빌드 후 `release/` 아래에 릴리즈용 zip을 생성하도록 변경
 - `.gitignore`에 `release/`를 추가해 패키징 산출물을 버전 관리에서 제외
 - `pyproject.toml`의 의존성 선언 위치와 build-system 구성을 정리해 `uv` 환경과 빌드가 정상 동작하도록 수정
+
+### Verified
+- `uv run python -m unittest discover -s tests -v`
 
 ## 0.1.0
 

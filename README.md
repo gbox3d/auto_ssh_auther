@@ -11,6 +11,7 @@
 | 키 삭제 | 선택한 키의 공개키·비밀키 쌍을 확인 후 삭제 |
 | 연결 테스트 | 비밀번호 기반 SSH 접속 테스트, 원격 호스트명 반환 |
 | 공개키 등록 | 원격 `authorized_keys`에 선택한 키 추가 (중복 방지) |
+| 로컬 SSH config 자동 반영 | 등록 성공 또는 이미 등록된 키일 때 `Host`별 접속 설정 자동 추가/갱신 |
 | 자동 디렉터리 생성 | 원격 `~/.ssh` 없으면 생성, 권한 `700`/`600` 자동 적용 |
 | 호스트 키 검증 | `known_hosts` 기반 검증, 미등록 서버는 경고 후 자동 등록 |
 | 비밀번호 미저장 | 서버 정보는 세션 중에만 사용, 디스크 저장 없음 |
@@ -42,7 +43,7 @@ uv run python build.py
 - 실행 폴더 결과물은 `dist/` 아래에 생성된다.
 - 빌드가 끝나면 릴리즈용 zip은 `release/` 아래에 별도로 생성된다.
 - zip 파일명 형식은 `앱이름_os_구동환경_version.zip` 이다.
-- 예: `auto_ssh_auther_windows_x86_64_0.1.0.zip`
+- 예: `auto_ssh_auther_windows_x86_64_0.2.0.zip`
 - 아이콘 파일은 spec에서 자동 포함되므로, `dist`로 별도 복사할 필요가 없다.
 - 런타임 창 아이콘과 실행 파일 아이콘 모두 같은 리소스를 사용한다.
 - Windows, macOS, Linux에서 같은 spec를 사용할 수 있지만, 실행 파일은 각 운영체제에서 직접 빌드해야 한다.
@@ -50,10 +51,10 @@ uv run python build.py
 ## GitHub 릴리즈
 
 - GitHub Release를 발행하려면 먼저 유효한 git tag가 필요하다.
-- 권장 태그 형식은 `v0.1.0`처럼 `v` 접두사를 붙인 버전명이다.
-- 권장 릴리즈 제목은 `auto_ssh_auther v0.1.0` 형식이다.
+- 권장 태그 형식은 `v0.2.0`처럼 `v` 접두사를 붙인 버전명이다.
+- 권장 릴리즈 제목은 `auto_ssh_auther v0.2.0` 형식이다.
 - 릴리즈 asset은 `release/` 아래에서 생성된 zip 파일을 업로드하면 된다.
-- 예: `release/auto_ssh_auther_windows_x86_64_0.1.0.zip`
+- 예: `release/auto_ssh_auther_windows_x86_64_0.2.0.zip`
 
 ## 사용 방법
 
@@ -64,7 +65,10 @@ uv run python build.py
 4. **Test Connection** 으로 접속 확인 (선택사항)
 5. 미등록 서버라면 경고 메시지와 함께 호스트 키를 `known_hosts`에 자동 등록
 6. **Register Key** 클릭
-7. 결과 창에서 `[성공]` / `[안내] 이미 등록됨` / `[실패]` 확인
+7. 원격 등록 성공 또는 이미 등록된 키라면 로컬 `~/.ssh/config`도 자동 반영
+8. 결과 창에서 `[성공]` / `[안내] 이미 등록됨` / `[실패]`와 `로컬 SSH config: added/updated/unchanged` 확인
+
+자동 반영되는 로컬 SSH config 항목은 `Host`, `HostName`, `Port`, `User`, `IdentityFile`, `IdentitiesOnly`, `PreferredAuthentications`이다. 이후에는 등록한 Host 기준으로 `ssh <Host>` 접속 시 선택한 키 파일이 자동 사용된다.
 
 ### 키 생성
 1. **Generate Key** 클릭
@@ -89,6 +93,7 @@ auto_ssh_auther/
 │       ├── services/
 │       │   └── register.py    # 키 등록 흐름 제어 (중복 검사 포함)
 │       ├── ssh/
+│       │   ├── local_config.py # 로컬 ~/.ssh/config Host 블록 추가·갱신
 │       │   └── remote.py      # paramiko 기반 SSH 접속, 원격 파일 조작
 │       └── ui/
 │           └── main_window.py # PySide6 GUI (GenerateKeyDialog 포함)

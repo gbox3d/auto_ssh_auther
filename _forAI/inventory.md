@@ -3,8 +3,9 @@
 ## 저장소 정보
 
 - 이름: `auto_ssh_auther`
-- 경로: `E:\work\auto_ssh_auther`
+- 경로: `D:\works\auto_ssh_auther`
 - 패키지 이름: `auto-ssh-auther`
+- 현재 버전: `0.2.0`
 - Python 요구사항: `>=3.11`
 
 ## 최상위 구조
@@ -19,7 +20,6 @@
 - `README.md`: 사용자용 설명서
 - `CHANGELOG.md`: 변경 이력
 - `icon_ssh_auther.ico`, `icon_ssh_auther.png`: 앱 아이콘 자산
-- `.claude/`: 로컬 보조 도구 설정으로 보이는 디렉터리
 
 ## 소스 구조
 
@@ -28,6 +28,7 @@
 - `src/ssh_auther/keys/local_keys.py`: 로컬 공개키 탐색, 파싱, 생성, 삭제
 - `src/ssh_auther/services/register.py`: 접속 테스트, 중복 검사, 사용자 메시지 변환, 등록 흐름 제어
 - `src/ssh_auther/ssh/remote.py`: Paramiko 기반 SSH 연결, `authorized_keys` 읽기/추가, `known_hosts` 처리
+- `src/ssh_auther/ssh/local_config.py`: 로컬 `~/.ssh/config` Host 블록 추가/갱신
 
 ## 실행 및 빌드 엔트리포인트
 
@@ -52,9 +53,15 @@
 - `tests/test_register.py`
   - 중복 키 판정 시 코멘트 무시
   - 주요 네트워크/SSH 오류 메시지 변환
+  - 원격 등록 성공 메시지에 로컬 SSH config 반영 결과 포함 확인
+- `tests/test_local_config.py`
+  - 신규 Host 블록 추가
+  - 기존 Host 블록 갱신
+  - 변경 없음 상태 유지
 
 ## 현재 파악된 공백
 
 - GUI 동작 자체에 대한 자동화 테스트는 없다.
 - 실제 SSH 서버를 대상으로 한 통합 테스트는 없다.
 - 키 생성/삭제 함수에 대한 직접 테스트는 아직 없다.
+- 복잡한 사용자 `~/.ssh/config` 사례는 더 많은 fixture로 보강할 수 있다.

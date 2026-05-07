@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "auto-ssh-auther"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.2.0"
+description = "GUI tool for registering local SSH public keys and updating local SSH config"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
