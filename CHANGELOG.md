@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 0.3.0 - 2026-06-01
+
+### Added
+- 키 등록 직후 시스템 `ssh`(BatchMode)로 키 전용 로그인이 실제로 되는지 자동 검증하고 결과를 결과창에 표시
+- 같은 서버(HostName)를 가리키지만 `IdentityFile`이 없는 다른 Host 별칭을 감지해 경고 (별칭으로 접속 시 키가 아니라 암호를 묻는 문제 예방)
+- `src/ssh_auther/ssh/verify.py`와 `tests/test_verify.py` 추가
+- `local_config.find_alias_collisions`와 관련 단위 테스트 추가
+
+### Changed
+- 프로젝트 버전을 `0.3.0`으로 갱신
+
+### Verified
+- `uv run python -m unittest discover -s tests -v`
+
 ## 0.2.1 - 2026-06-01
 
 ### Changed

@@ -89,6 +89,58 @@ def ensure_host_config(
     )
 
 
+def find_alias_collisions(
+    host: str,
+    *,
+    config_path: Path | None = None,
+    home_dir: Path | None = None,
+) -> list[str]:
+    """같은 서버(HostName)를 가리키지만 IdentityFile이 없는 다른 Host 블록 이름을 찾는다.
+
+    예: 앱이 `Host 192.168.0.220`을 키와 함께 등록해도, 사용자가 별도로 만든
+    `Host gb-dgx-01`(HostName 192.168.0.220, IdentityFile 없음) 별칭으로 접속하면
+    키가 적용되지 않는다. 그런 별칭 이름들을 돌려준다.
+    """
+    host = host.strip()
+    if home_dir is None:
+        home_dir = Path.home()
+    if config_path is None:
+        config_path = home_dir / ".ssh" / "config"
+
+    lines = _read_lines(config_path)
+    collisions: list[str] = []
+    index = 0
+    while index < len(lines):
+        parsed = _parse_directive(lines[index])
+        if parsed is None or parsed[0].lower() != "host":
+            index += 1
+            continue
+
+        start = index
+        end = _next_section_index(lines, start + 1)
+        patterns = parsed[1].split()
+        block = lines[start:end]
+
+        hostname = _block_option(block, "hostname")
+        effective_hostname = hostname if hostname is not None else (patterns[0] if patterns else "")
+        has_identity = _block_option(block, "identityfile") is not None
+
+        if effective_hostname == host and not has_identity:
+            collisions.extend(patterns)
+        index = end
+
+    return collisions
+
+
+def _block_option(block: list[str], key_lower: str) -> str | None:
+    """Host 블록 안에서 주어진 옵션의 값을 찾는다(대소문자 무관). 없으면 None."""
+    for line in block[1:]:
+        parsed = _parse_directive(line)
+        if parsed is not None and parsed[0].lower() == key_lower:
+            return parsed[1].strip()
+    return None
+
+
 def _desired_options(host: str, port: int, username: str, identity_file: Path, home_dir: Path) -> dict[str, str]:
     return {
         "HostName": host,

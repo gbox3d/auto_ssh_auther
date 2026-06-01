@@ -8,7 +8,12 @@ from paramiko.ssh_exception import BadHostKeyException, NoValidConnectionsError,
 
 from ssh_auther.keys import PublicKeyInfo
 from ssh_auther.ssh import SSHConnection
-from ssh_auther.ssh.local_config import ensure_host_config, private_key_path_from_public_key
+from ssh_auther.ssh.local_config import (
+    ensure_host_config,
+    find_alias_collisions,
+    private_key_path_from_public_key,
+)
+from ssh_auther.ssh.verify import verify_key_login
 
 
 class RegisterResult(Enum):
@@ -133,6 +138,15 @@ def register_key(
         messages.append(message)
         if status in {RegisterResult.SUCCESS, RegisterResult.ALREADY_EXISTS}:
             messages.append(apply_local_ssh_config(key_info, host, port, username))
+            identity_file = private_key_path_from_public_key(key_info.path)
+            messages.append(verify_key_login(host, port, username, identity_file).message)
+            collisions = find_alias_collisions(host)
+            if collisions:
+                names = ", ".join(collisions)
+                messages.append(
+                    f"주의: 같은 서버({host})를 가리키지만 키 설정이 없는 Host 별칭이 있습니다: {names}. "
+                    "해당 별칭으로 접속하면 키가 아니라 암호를 묻습니다."
+                )
         return status, "\n".join(messages)
     except Exception as exc:
         return RegisterResult.FAILED, format_connection_error(exc)

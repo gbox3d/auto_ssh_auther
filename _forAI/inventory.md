@@ -5,7 +5,7 @@
 - 이름: `auto_ssh_auther`
 - 경로: `D:\works\auto_ssh_auther`
 - 패키지 이름: `auto-ssh-auther`
-- 현재 버전: `0.2.1`
+- 현재 버전: `0.3.0`
 - Python 요구사항: `>=3.11`
 
 ## 최상위 구조
@@ -28,7 +28,8 @@
 - `src/ssh_auther/keys/local_keys.py`: 로컬 공개키 탐색, 파싱, 생성, 삭제
 - `src/ssh_auther/services/register.py`: 접속 테스트, 중복 검사, 사용자 메시지 변환, 등록 흐름 제어
 - `src/ssh_auther/ssh/remote.py`: Paramiko 기반 SSH 연결, `authorized_keys` 읽기/추가, `known_hosts` 처리
-- `src/ssh_auther/ssh/local_config.py`: 로컬 `~/.ssh/config` Host 블록 추가/갱신
+- `src/ssh_auther/ssh/local_config.py`: 로컬 `~/.ssh/config` Host 블록 추가/갱신, 별칭 충돌 감지(`find_alias_collisions`)
+- `src/ssh_auther/ssh/verify.py`: 시스템 `ssh`(BatchMode) 기반 키 전용 로그인 검증
 
 ## 실행 및 빌드 엔트리포인트
 
@@ -58,6 +59,10 @@
   - 신규 Host 블록 추가
   - 기존 Host 블록 갱신
   - 변경 없음 상태 유지
+  - 같은 서버를 가리키는 IdentityFile 없는 별칭 감지(`find_alias_collisions`)
+- `tests/test_verify.py`
+  - 키 전용 ssh 검증 명령 구성
+  - ssh 미설치/성공/실패/타임아웃 메시지 처리
 
 ## 현재 파악된 공백
 
