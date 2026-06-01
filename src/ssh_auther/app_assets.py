@@ -25,7 +25,9 @@ WINDOWS_APP_ID = "com.gbworks.auto-ssh-auther"
 def _bundle_root() -> Path:
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         return Path(sys._MEIPASS)
-    return Path(__file__).resolve().parents[1]
+    # 소스 실행 시: app_assets.py는 src/ssh_auther/에 있으므로 parents[2]가 프로젝트 루트
+    # (아이콘 리소스 icon_ssh_auther.ico/.png는 프로젝트 루트에 있다)
+    return Path(__file__).resolve().parents[2]
 
 
 def resource_path(name: str) -> Path:

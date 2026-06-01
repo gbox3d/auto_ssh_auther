@@ -2,17 +2,25 @@
 
 ## Unreleased
 
+## 0.3.2 - 2026-06-01
+
 ### Added
 - 선택한 키의 서버 등록 상태를 자동 감지(키 선택/서버 입력 변경 시 디바운스)해, 버튼 하나가 상황에 따라 **Register / Unregister** 로 전환되는 스마트 동작 버튼
 - 원격 `authorized_keys`에서 선택한 키를 제거하는 **Unregister(키 해제)** 기능
 - 서버 무응답·주소 미입력 시 동작 버튼 자동 비활성화 + 현재 상태 표시 라벨
-- 이전 접속 주소 기억 + Host 입력칸 자동완성(부분일치). 주소 선택 시 Port/User 자동 채움. host/port/user만 앱 설정폴더 JSON에 저장하며 **비밀번호는 저장하지 않음**
+- 이전 접속 정보 기억 + Host·Username 입력칸 자동완성(드롭다운 선택 + 직접 입력, 부분일치). Host 선택 시 Port/User 자동 채움. 성공한 접속(Test/Register/Unregister)과 키 등록 상태 자동 감지 성공 시 기록하며, host/port/user만 앱 설정폴더 JSON에 저장하고 **비밀번호는 저장하지 않음**
 
 ### Changed
 - `Verify Key Login` 버튼 제거 — 키 선택 시 등록 상태 자동 감지로 대체 (`Test Connection`은 유지)
+- 포트 입력칸의 스피너(증감 화살표)를 제거해 정수만 입력하는 깔끔한 입력칸으로 변경
+- 프로젝트 버전을 `0.3.2`로 갱신
 
 ### Fixed
 - `Verify Key Login` 검증이 접속 호스트와 매칭되는 `~/.ssh/config` 블록의 `IdentityFile`까지 함께 시도해, 서버에 미등록인 키도 성공으로 표시되던 거짓 양성 수정. 검증 ssh 명령에 `-F os.devnull`을 추가해 사용자 config를 무시하고 `-i`로 지정한 키만 격리 검증한다.
+- 소스 실행(dev) 시 아이콘 경로가 `src/`를 가리켜 타이틀바·작업표시줄 아이콘이 표시되지 않던 문제 수정(리소스 루트를 프로젝트 루트로 해석). 빌드 본은 영향 없음.
+
+### Verified
+- `uv run python -m unittest discover -s tests -v`
 
 ## 0.3.1 - 2026-06-01
 

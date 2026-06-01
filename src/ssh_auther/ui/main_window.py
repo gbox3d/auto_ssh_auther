@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QSpinBox,
+    QAbstractSpinBox,
     QPushButton,
     QTextEdit,
     QMessageBox,
@@ -121,7 +122,7 @@ class MainWindow(QMainWindow):
         self._history = load_history(self._history_path)
 
         self._build_ui()
-        self._refresh_host_combo()
+        self._refresh_history_widgets()
         self._load_keys()
 
     def _build_ui(self):
@@ -179,14 +180,21 @@ class MainWindow(QMainWindow):
         self.input_port = QSpinBox()
         self.input_port.setRange(1, 65535)
         self.input_port.setValue(22)
+        self.input_port.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
         row2.addWidget(self.input_port)
         server_layout.addLayout(row2)
 
-        # Username
+        # Username (이전 사용자 기억 + 자동완성)
         row3 = QHBoxLayout()
         row3.addWidget(QLabel("Username:"))
-        self.input_username = QLineEdit()
-        self.input_username.setPlaceholderText("예: root")
+        self.input_username = QComboBox()
+        self.input_username.setEditable(True)
+        self.input_username.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.input_username.lineEdit().setPlaceholderText("예: root")
+        user_completer = self.input_username.completer()
+        user_completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+        user_completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        user_completer.setFilterMode(Qt.MatchFlag.MatchContains)
         row3.addWidget(self.input_username)
         server_layout.addLayout(row3)
 
@@ -232,7 +240,7 @@ class MainWindow(QMainWindow):
         # 키 선택/서버 입력이 바뀌면 등록 상태를 자동 감지
         self.key_list.currentRowChanged.connect(self._schedule_detection)
         self.input_host.currentTextChanged.connect(self._schedule_detection)
-        self.input_username.textChanged.connect(self._schedule_detection)
+        self.input_username.currentTextChanged.connect(self._schedule_detection)
         self.input_port.valueChanged.connect(self._schedule_detection)
 
     def _load_keys(self):
@@ -259,7 +267,7 @@ class MainWindow(QMainWindow):
     def _get_server_info(self) -> tuple[str, int, str, str] | None:
         host = self.input_host.currentText().strip()
         port = self.input_port.value()
-        username = self.input_username.text().strip()
+        username = self.input_username.currentText().strip()
         password = self.input_password.text()
 
         if not host:
@@ -281,8 +289,12 @@ class MainWindow(QMainWindow):
             base = str(Path.home() / ".auto_ssh_auther")
         return Path(base) / "history.json"
 
+    def _refresh_history_widgets(self):
+        self._refresh_host_combo()
+        self._refresh_username_combo()
+
     def _refresh_host_combo(self):
-        """현재 입력 텍스트는 유지한 채 콤보 항목을 이력으로 다시 채운다."""
+        """현재 입력 텍스트는 유지한 채 Host 콤보 항목을 이력으로 다시 채운다."""
         current = self.input_host.currentText()
         self.input_host.blockSignals(True)
         self.input_host.clear()
@@ -290,27 +302,47 @@ class MainWindow(QMainWindow):
         self.input_host.setCurrentText(current)
         self.input_host.blockSignals(False)
 
+    def _refresh_username_combo(self):
+        """현재 입력 텍스트는 유지한 채 Username 콤보를 이력의 사용자 목록으로 채운다(중복 제거)."""
+        users: list[str] = []
+        for profile in self._history:
+            if profile.user not in users:
+                users.append(profile.user)
+        current = self.input_username.currentText()
+        self.input_username.blockSignals(True)
+        self.input_username.clear()
+        self.input_username.addItems(users)
+        self.input_username.setCurrentText(current)
+        self.input_username.blockSignals(False)
+
     def _on_host_selected(self, text: str):
         """이력에서 host를 고르면 port/user를 자동으로 채운다."""
         for profile in self._history:
             if profile.host == text:
                 self.input_port.setValue(profile.port)
-                self.input_username.setText(profile.user)
+                self.input_username.setCurrentText(profile.user)
                 break
 
     def _remember_current_target(self):
-        """현재 host/port/user를 이력에 저장한다(비밀번호는 저장하지 않는다)."""
+        """현재 host/port/user를 이력에 저장한다(비밀번호는 저장하지 않는다).
+
+        값이 실제로 바뀔 때만 저장/갱신해, 자동 감지가 반복돼도 불필요한 디스크 쓰기나
+        콤보 재구성이 일어나지 않게 한다.
+        """
         host = self.input_host.currentText().strip()
         port = self.input_port.value()
-        username = self.input_username.text().strip()
+        username = self.input_username.currentText().strip()
         if not host or not username:
             return
-        self._history = add_profile(self._history, host, port, username)
+        updated = add_profile(self._history, host, port, username)
+        if updated == self._history:
+            return
+        self._history = updated
         try:
             save_history(self._history_path, self._history)
         except OSError:
             pass
-        self._refresh_host_combo()
+        self._refresh_history_widgets()
 
     def _set_busy(self, busy: bool):
         self._busy = busy
@@ -402,7 +434,7 @@ class MainWindow(QMainWindow):
 
         key = self._get_selected_key()
         host = self.input_host.currentText().strip()
-        username = self.input_username.text().strip()
+        username = self.input_username.currentText().strip()
         if not key or not host or not username:
             self._detect_timer.stop()
             self.lbl_status.setText("상태: 키를 선택하고 서버 주소·계정을 입력하세요.")
@@ -417,7 +449,7 @@ class MainWindow(QMainWindow):
         key = self._get_selected_key()
         host = self.input_host.currentText().strip()
         port = self.input_port.value()
-        username = self.input_username.text().strip()
+        username = self.input_username.currentText().strip()
         if not key or not host or not username:
             return
 
@@ -440,6 +472,7 @@ class MainWindow(QMainWindow):
             self.btn_action.setText("Unregister Key")
             self.btn_action.setEnabled(True)
             self.lbl_status.setText("상태: 등록됨 — 해제할 수 있습니다.")
+            self._remember_current_target()  # 자동 감지가 성공하면 접속 정보를 기억
         elif status == KeyStatus.NOT_REGISTERED:
             self._action_mode = "register"
             self.btn_action.setText("Register Key")
