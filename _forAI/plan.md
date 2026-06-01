@@ -11,6 +11,7 @@
 - `Host`, `HostName`, `Port`, `User`, `IdentityFile`, `IdentitiesOnly`, `PreferredAuthentications` 항목을 Host별로 추가/갱신한다.
 - 로컬 config 반영 결과를 `added`, `updated`, `unchanged`로 사용자 메시지에 함께 표시한다.
 - 프로젝트 버전을 `0.2.0`으로 올렸다.
+- `0.2.1`: `_forAI` 문서 세트를 정리하고 중복 계획 문서 `myplan.md`를 이 문서로 통합했다. GitHub Release(`v0.2.1`)와 빌드 zip을 발행했다.
 
 ## 가까운 작업 후보
 

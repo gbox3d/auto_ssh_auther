@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.2.1 - 2026-06-01
+
+### Changed
+- 프로젝트 버전을 `0.2.1`로 갱신
+- `_forAI` 문서 세트를 현재 구조 기준으로 정리하고 버전 표기를 `0.2.1`로 통일
+- 중복 계획 문서 `_forAI/myplan.md`를 `plan.md` 기준으로 통합하고 제거
+
+### Verified
+- `uv run python -m unittest discover -s tests -v`
+
 ## 0.2.0 - 2026-05-06
 
 ### Added

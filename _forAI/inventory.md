@@ -5,7 +5,7 @@
 - 이름: `auto_ssh_auther`
 - 경로: `D:\works\auto_ssh_auther`
 - 패키지 이름: `auto-ssh-auther`
-- 현재 버전: `0.2.0`
+- 현재 버전: `0.2.1`
 - Python 요구사항: `>=3.11`
 
 ## 최상위 구조
