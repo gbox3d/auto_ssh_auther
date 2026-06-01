@@ -125,3 +125,23 @@ class SSHConnection:
         if exit_code != 0:
             err = stderr.read().decode().strip()
             raise RuntimeError(f"키 추가 실패: {err}")
+
+    def write_authorized_keys(self, content: str) -> None:
+        """authorized_keys를 주어진 내용으로 덮어쓴다. 임시 파일에 쓴 뒤 mv로 교체한다."""
+        if not self._client:
+            raise RuntimeError("SSH 연결이 되어 있지 않습니다.")
+
+        command = (
+            "mkdir -p ~/.ssh && chmod 700 ~/.ssh && "
+            "cat > ~/.ssh/authorized_keys.tmp && "
+            "chmod 600 ~/.ssh/authorized_keys.tmp && "
+            "mv ~/.ssh/authorized_keys.tmp ~/.ssh/authorized_keys"
+        )
+        stdin, stdout, stderr = self._client.exec_command(command)
+        stdin.write(content)
+        stdin.flush()
+        stdin.channel.shutdown_write()
+        exit_code = stdout.channel.recv_exit_status()
+        if exit_code != 0:
+            err = stderr.read().decode().strip()
+            raise RuntimeError(f"authorized_keys 쓰기 실패: {err}")

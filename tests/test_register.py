@@ -10,7 +10,14 @@ from ssh_auther.keys import PublicKeyInfo
 from ssh_auther.ssh.local_config import SSHConfigStatus, SSHConfigUpdate
 from ssh_auther.ssh.verify import VerifyResult
 from ssh_auther.services.register import format_connection_error, key_exists_in_content
-from ssh_auther.services.register import register_key, run_key_login_verification, RegisterResult
+from ssh_auther.services.register import (
+    register_key,
+    unregister_key,
+    detect_key_status,
+    remove_key_from_content,
+    RegisterResult,
+    KeyStatus,
+)
 
 
 class RegisterServiceTests(unittest.TestCase):
@@ -74,23 +81,62 @@ class RegisterServiceTests(unittest.TestCase):
         )
         self.assertIn("키 로그인 검증 성공", message)
 
-    def test_run_key_login_verification_uses_private_key_and_delegates(self):
-        key_info = PublicKeyInfo(
+    def _sample_key(self) -> PublicKeyInfo:
+        return PublicKeyInfo(
             path=Path("/home/u/.ssh/id_ed25519_prod.pub"),
             filename="id_ed25519_prod.pub",
             key_type="ssh-ed25519",
-            key_data="AAAA",
-            comment="",
-            full_line="ssh-ed25519 AAAA",
+            key_data="AAAATESTKEY",
+            comment="prod",
+            full_line="ssh-ed25519 AAAATESTKEY prod",
         )
 
-        with patch("ssh_auther.services.register.verify_key_login") as verify:
-            verify.return_value = VerifyResult(True, "ok-msg")
-            ok, message = run_key_login_verification(key_info, "h", 22, "u")
+    def test_remove_key_from_content_removes_matching_ignoring_comment(self):
+        content = (
+            "ssh-ed25519 AAAATESTKEY other-comment\n"
+            "ssh-rsa BBBBOTHER another\n"
+        )
+        new_content, removed = remove_key_from_content("ssh-ed25519 AAAATESTKEY prod", content)
+        self.assertEqual(removed, 1)
+        self.assertNotIn("AAAATESTKEY", new_content)
+        self.assertIn("ssh-rsa BBBBOTHER another", new_content)
+        self.assertTrue(new_content.endswith("\n"))
 
+    def test_remove_key_from_content_keeps_comments_and_blanks(self):
+        content = "# header\n\nssh-rsa BBBBOTHER x\n"
+        new_content, removed = remove_key_from_content("ssh-ed25519 AAAATESTKEY prod", content)
+        self.assertEqual(removed, 0)
+        self.assertIn("# header", new_content)
+        self.assertIn("ssh-rsa BBBBOTHER x", new_content)
+
+    def test_detect_key_status_maps_verify_result(self):
+        key_info = self._sample_key()
+        cases = [
+            (VerifyResult(True, "ok", reason="ok"), KeyStatus.REGISTERED),
+            (VerifyResult(False, "denied", reason="auth_failed"), KeyStatus.NOT_REGISTERED),
+            (VerifyResult(False, "timeout", reason="unreachable"), KeyStatus.UNREACHABLE),
+        ]
+        for verify_result, expected in cases:
+            with self.subTest(reason=verify_result.reason):
+                with patch("ssh_auther.services.register.verify_key_login", return_value=verify_result):
+                    status, _ = detect_key_status(key_info, "h", 22, "u")
+                self.assertEqual(status, expected)
+
+    def test_unregister_key_message_when_present(self):
+        key_info = self._sample_key()
+        with patch("ssh_auther.services.register.run_with_host_trust_fallback") as run_fallback:
+            run_fallback.return_value = (True, None)  # was_present=True
+            ok, message = unregister_key(key_info, "h", 22, "u", "pw")
         self.assertTrue(ok)
-        self.assertEqual(message, "ok-msg")
-        verify.assert_called_once_with("h", 22, "u", Path("/home/u/.ssh/id_ed25519_prod"))
+        self.assertIn("제거", message)
+
+    def test_unregister_key_message_when_absent(self):
+        key_info = self._sample_key()
+        with patch("ssh_auther.services.register.run_with_host_trust_fallback") as run_fallback:
+            run_fallback.return_value = (False, None)  # was_present=False
+            ok, message = unregister_key(key_info, "h", 22, "u", "pw")
+        self.assertTrue(ok)
+        self.assertIn("제거할 항목 없음", message)
 
 
 if __name__ == "__main__":

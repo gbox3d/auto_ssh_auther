@@ -1,6 +1,6 @@
 """메인 GUI 윈도우."""
 
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt, QThread, Signal, QTimer
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -25,9 +25,11 @@ from ssh_auther.app_assets import WINDOW_TITLE, load_app_icon
 from ssh_auther.keys import find_public_keys, PublicKeyInfo, generate_key, delete_key, SUPPORTED_KEY_ALGORITHMS
 from ssh_auther.services.register import (
     register_key,
-    run_key_login_verification,
+    unregister_key,
+    detect_key_status,
     test_connection,
     RegisterResult,
+    KeyStatus,
 )
 
 
@@ -101,6 +103,15 @@ class MainWindow(QMainWindow):
 
         self._keys: list[PublicKeyInfo] = []
         self._worker: WorkerThread | None = None
+        self._detect_workers: list[WorkerThread] = []
+        self._detect_gen = 0
+        self._action_mode: str | None = None  # 'register' | 'unregister' | None
+        self._busy = False
+
+        self._detect_timer = QTimer(self)
+        self._detect_timer.setSingleShot(True)
+        self._detect_timer.setInterval(600)
+        self._detect_timer.timeout.connect(self._run_detection)
 
         self._build_ui()
         self._load_keys()
@@ -181,15 +192,16 @@ class MainWindow(QMainWindow):
         self.btn_test.clicked.connect(self._on_test_connection)
         btn_layout.addWidget(self.btn_test)
 
-        self.btn_register = QPushButton("Register Key")
-        self.btn_register.clicked.connect(self._on_register_key)
-        btn_layout.addWidget(self.btn_register)
-
-        self.btn_verify = QPushButton("Verify Key Login")
-        self.btn_verify.clicked.connect(self._on_verify_key)
-        btn_layout.addWidget(self.btn_verify)
+        # 선택한 키의 등록 상태에 따라 Register/Unregister로 전환되는 스마트 버튼
+        self.btn_action = QPushButton("Register Key")
+        self.btn_action.setEnabled(False)
+        self.btn_action.clicked.connect(self._on_action)
+        btn_layout.addWidget(self.btn_action)
 
         layout.addLayout(btn_layout)
+
+        self.lbl_status = QLabel("상태: 키를 선택하고 서버 주소·계정을 입력하세요.")
+        layout.addWidget(self.lbl_status)
 
         # --- 결과 출력 ---
         result_group = QGroupBox("결과")
@@ -202,12 +214,19 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(result_group)
 
+        # 키 선택/서버 입력이 바뀌면 등록 상태를 자동 감지
+        self.key_list.currentRowChanged.connect(self._schedule_detection)
+        self.input_host.textChanged.connect(self._schedule_detection)
+        self.input_username.textChanged.connect(self._schedule_detection)
+        self.input_port.valueChanged.connect(self._schedule_detection)
+
     def _load_keys(self):
         self.key_list.clear()
         self._keys = find_public_keys()
 
         if not self._keys:
             self.key_list.addItem("공개키 파일이 없습니다. (~/.ssh/*.pub)")
+            self._schedule_detection()
             return
 
         for key_info in self._keys:
@@ -240,28 +259,15 @@ class MainWindow(QMainWindow):
 
         return host, port, username, password
 
-    def _get_verify_target(self) -> tuple[str, int, str] | None:
-        """검증용 접속 대상. 키 전용 검증이므로 비밀번호는 받지 않는다."""
-        host = self.input_host.text().strip()
-        port = self.input_port.value()
-        username = self.input_username.text().strip()
-
-        if not host:
-            self._log("오류: 서버 주소를 입력하세요.")
-            return None
-        if not username:
-            self._log("오류: 사용자 이름을 입력하세요.")
-            return None
-
-        return host, port, username
-
     def _set_busy(self, busy: bool):
+        self._busy = busy
         self.btn_test.setEnabled(not busy)
-        self.btn_register.setEnabled(not busy)
-        self.btn_verify.setEnabled(not busy)
         self.btn_reload.setEnabled(not busy)
         self.btn_generate.setEnabled(not busy)
         self.btn_delete.setEnabled(not busy)
+        if busy:
+            self.btn_action.setEnabled(False)
+            self._detect_timer.stop()
 
     def _log(self, message: str):
         self.result_text.append(message)
@@ -329,30 +335,106 @@ class MainWindow(QMainWindow):
         success, message = result
         self._log(message)
         self._set_busy(False)
+        self._schedule_detection()
 
-    # --- Verify Key Login ---
-    def _on_verify_key(self):
-        key_info = self._get_selected_key()
-        if not key_info:
-            self._log("오류: 검증할 공개키를 선택하세요.")
+    # --- 등록 상태 자동 감지 (디바운스) ---
+    def _schedule_detection(self, *args):
+        """키 선택/서버 입력이 바뀌면 잠시 후 등록 상태를 다시 감지한다."""
+        self._action_mode = None
+        self.btn_action.setEnabled(False)
+        if self._busy:
             return
 
-        target = self._get_verify_target()
-        if not target:
+        key = self._get_selected_key()
+        host = self.input_host.text().strip()
+        username = self.input_username.text().strip()
+        if not key or not host or not username:
+            self._detect_timer.stop()
+            self.lbl_status.setText("상태: 키를 선택하고 서버 주소·계정을 입력하세요.")
+            return
+
+        self.lbl_status.setText("상태: 확인 중…")
+        self._detect_timer.start()
+
+    def _run_detection(self):
+        if self._busy:
+            return
+        key = self._get_selected_key()
+        host = self.input_host.text().strip()
+        port = self.input_port.value()
+        username = self.input_username.text().strip()
+        if not key or not host or not username:
+            return
+
+        self._detect_gen += 1
+        gen = self._detect_gen
+        worker = WorkerThread(detect_key_status, key, host, port, username)
+        self._detect_workers.append(worker)
+        worker.finished.connect(lambda result, g=gen, w=worker: self._on_detection_done(g, w, result))
+        worker.start()
+
+    def _on_detection_done(self, gen, worker, result):
+        if worker in self._detect_workers:
+            self._detect_workers.remove(worker)
+        if gen != self._detect_gen or self._busy:
+            return
+
+        status, message = result
+        if status == KeyStatus.REGISTERED:
+            self._action_mode = "unregister"
+            self.btn_action.setText("Unregister Key")
+            self.btn_action.setEnabled(True)
+            self.lbl_status.setText("상태: 등록됨 — 해제할 수 있습니다.")
+        elif status == KeyStatus.NOT_REGISTERED:
+            self._action_mode = "register"
+            self.btn_action.setText("Register Key")
+            self.btn_action.setEnabled(True)
+            self.lbl_status.setText("상태: 미등록 — 등록할 수 있습니다.")
+        else:
+            self._action_mode = None
+            self.btn_action.setEnabled(False)
+            self.lbl_status.setText(f"상태: 서버 응답 없음 — {message}")
+
+    # --- 스마트 동작 버튼 ---
+    def _on_action(self):
+        if self._action_mode == "register":
+            self._on_register_key()
+        elif self._action_mode == "unregister":
+            self._on_unregister_key()
+
+    # --- Unregister Key ---
+    def _on_unregister_key(self):
+        key_info = self._get_selected_key()
+        if not key_info:
+            self._log("오류: 해제할 공개키를 선택하세요.")
+            return
+
+        server_info = self._get_server_info()
+        if not server_info:
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "키 해제 확인",
+            f"원격 서버에서 '{key_info.filename}' 키를 제거하시겠습니까?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
             return
 
         self._set_busy(True)
-        self._log(f"키 로그인 검증 중... ({key_info.filename})")
+        self._log(f"키 해제 중... ({key_info.filename})")
 
-        self._worker = WorkerThread(run_key_login_verification, key_info, *target)
-        self._worker.finished.connect(self._on_verify_done)
+        self._worker = WorkerThread(unregister_key, key_info, *server_info)
+        self._worker.finished.connect(self._on_unregister_done)
         self._worker.start()
 
-    def _on_verify_done(self, result):
+    def _on_unregister_done(self, result):
         ok, message = result
-        prefix = "[성공]" if ok else "[실패]"
-        self._log(f"{prefix} {message}")
+        self._log(f"{'[성공]' if ok else '[실패]'} {message}")
         self._set_busy(False)
+        self._schedule_detection()
 
     # --- Register Key ---
     def _on_register_key(self):
@@ -381,3 +463,4 @@ class MainWindow(QMainWindow):
         else:
             self._log(f"[실패] {message}")
         self._set_busy(False)
+        self._schedule_detection()

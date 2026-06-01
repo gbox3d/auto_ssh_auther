@@ -65,6 +65,26 @@ class VerifyKeyLoginTests(unittest.TestCase):
 
         self.assertFalse(result.ok)
         self.assertIn("Permission denied (publickey).", result.message)
+        self.assertEqual(result.reason, "auth_failed")
+
+    def test_classifies_connection_failure_as_unreachable(self):
+        completed = SimpleNamespace(
+            returncode=255,
+            stdout="",
+            stderr="ssh: connect to host h port 22: Connection timed out",
+        )
+        with mock.patch("ssh_auther.ssh.verify.shutil.which", return_value="ssh"), mock.patch(
+            "ssh_auther.ssh.verify.subprocess.run", return_value=completed
+        ):
+            result = verify_key_login("h", 22, "u", self._identity())
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.reason, "unreachable")
+
+    def test_missing_client_reason(self):
+        with mock.patch("ssh_auther.ssh.verify.shutil.which", return_value=None):
+            result = verify_key_login("h", 22, "u", self._identity())
+        self.assertEqual(result.reason, "no_client")
 
     def test_reports_timeout(self):
         with mock.patch("ssh_auther.ssh.verify.shutil.which", return_value="ssh"), mock.patch(

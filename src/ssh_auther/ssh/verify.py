@@ -13,6 +13,14 @@ from pathlib import Path
 class VerifyResult:
     ok: bool
     message: str
+    reason: str = "ok"  # ok | auth_failed | unreachable | no_client
+
+
+def _classify_failure(stderr: str) -> str:
+    """ssh 실패 원인을 분류한다. 인증 거부(키 미등록)와 서버 무응답을 구분한다."""
+    if "permission denied" in stderr.lower():
+        return "auth_failed"
+    return "unreachable"
 
 
 def build_verify_command(
@@ -53,17 +61,18 @@ def verify_key_login(
 ) -> VerifyResult:
     """등록된 키만으로 서버 로그인이 되는지 확인한다."""
     if shutil.which("ssh") is None:
-        return VerifyResult(False, "키 로그인 검증 건너뜀: 시스템 ssh 클라이언트를 찾을 수 없습니다.")
+        return VerifyResult(False, "키 로그인 검증 건너뜀: 시스템 ssh 클라이언트를 찾을 수 없습니다.", reason="no_client")
 
     command = build_verify_command(host, port, username, identity_file, timeout)
     try:
         proc = subprocess.run(command, capture_output=True, text=True, timeout=timeout + 7)
     except subprocess.TimeoutExpired:
-        return VerifyResult(False, "키 로그인 검증 실패: 응답 시간 초과.")
+        return VerifyResult(False, "키 로그인 검증 실패: 응답 시간 초과.", reason="unreachable")
 
     if proc.returncode == 0:
-        return VerifyResult(True, "키 로그인 검증 성공: 암호 없이 키로 접속됩니다.")
+        return VerifyResult(True, "키 로그인 검증 성공: 암호 없이 키로 접속됩니다.", reason="ok")
 
-    detail = (proc.stderr or "").strip().splitlines()
+    stderr = proc.stderr or ""
+    detail = stderr.strip().splitlines()
     reason = detail[-1].strip() if detail else f"exit {proc.returncode}"
-    return VerifyResult(False, f"키 로그인 검증 실패: {reason}")
+    return VerifyResult(False, f"키 로그인 검증 실패: {reason}", reason=_classify_failure(stderr))

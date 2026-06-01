@@ -22,6 +22,12 @@ class RegisterResult(Enum):
     FAILED = "failed"
 
 
+class KeyStatus(Enum):
+    REGISTERED = "registered"          # 키로 로그인 가능 → 해제 제안
+    NOT_REGISTERED = "not_registered"  # 서버는 응답하나 키 거부 → 등록 제안
+    UNREACHABLE = "unreachable"        # 서버 무응답/도달 불가 → 동작 비활성
+
+
 UNKNOWN_HOST_WARNING = "주의: 미등록 호스트를 감지해 known_hosts에 자동 등록한 뒤 계속 진행했습니다."
 
 
@@ -93,6 +99,33 @@ def key_exists_in_content(key_line: str, content: str) -> bool:
     return False
 
 
+def remove_key_from_content(key_line: str, content: str) -> tuple[str, int]:
+    """authorized_keys 내용에서 동일한 키(타입+데이터)를 제거한 새 내용과 제거 건수를 반환한다.
+
+    코멘트는 무시하고 타입+base64 데이터로 매칭한다. 주석/빈 줄/다른 키는 그대로 둔다.
+    """
+    parts = key_line.split(None, 2)
+    if len(parts) < 2:
+        return content, 0
+    key_type, key_data = parts[0], parts[1]
+
+    kept: list[str] = []
+    removed = 0
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#"):
+            line_parts = stripped.split(None, 2)
+            if len(line_parts) >= 2 and line_parts[0] == key_type and line_parts[1] == key_data:
+                removed += 1
+                continue
+        kept.append(line)
+
+    new_content = "\n".join(kept)
+    if kept:
+        new_content += "\n"
+    return new_content, removed
+
+
 def apply_local_ssh_config(key_info: PublicKeyInfo, host: str, port: int, username: str) -> str:
     """등록된 키를 사용할 수 있도록 로컬 OpenSSH config를 반영한다."""
     try:
@@ -152,16 +185,54 @@ def register_key(
         return RegisterResult.FAILED, format_connection_error(exc)
 
 
-def run_key_login_verification(
+def detect_key_status(
     key_info: PublicKeyInfo,
     host: str,
     port: int,
     username: str,
-) -> tuple[bool, str]:
-    """선택한 키만으로(암호 없이) 서버 로그인이 되는지 검증한다."""
+) -> tuple[KeyStatus, str]:
+    """선택한 키만으로(암호 없이) 서버 등록 상태를 감지한다."""
     identity_file = private_key_path_from_public_key(key_info.path)
     result = verify_key_login(host, port, username, identity_file)
-    return result.ok, result.message
+    if result.ok:
+        return KeyStatus.REGISTERED, "등록됨 (키로 접속 가능)"
+    if result.reason == "auth_failed":
+        return KeyStatus.NOT_REGISTERED, "미등록 (서버는 응답함)"
+    return KeyStatus.UNREACHABLE, result.message
+
+
+def unregister_key(
+    key_info: PublicKeyInfo,
+    host: str,
+    port: int,
+    username: str,
+    password: str,
+) -> tuple[bool, str]:
+    """원격 authorized_keys에서 선택한 키를 제거한다.
+
+    Returns:
+        (성공 여부, 메시지). 이미 없으면 제거할 항목이 없다는 안내와 함께 성공으로 본다.
+    """
+    try:
+        def operation(conn: SSHConnection) -> bool:
+            existing = conn.read_authorized_keys()
+            if not key_exists_in_content(key_info.full_line, existing):
+                return False
+            new_content, _ = remove_key_from_content(key_info.full_line, existing)
+            conn.write_authorized_keys(new_content)
+            return True
+
+        was_present, warning = run_with_host_trust_fallback(host, port, username, password, operation)
+        messages = []
+        if warning:
+            messages.append(warning)
+        if was_present:
+            messages.append("키를 원격 authorized_keys에서 제거했습니다.")
+        else:
+            messages.append("이미 등록돼 있지 않습니다 (제거할 항목 없음).")
+        return True, "\n".join(messages)
+    except Exception as exc:
+        return False, format_connection_error(exc)
 
 
 def test_connection(host: str, port: int, username: str, password: str) -> tuple[bool, str]:

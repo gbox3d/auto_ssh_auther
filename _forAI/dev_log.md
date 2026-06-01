@@ -2,6 +2,7 @@
 
 ## Entries
 
+- 2026-06-01: 스마트 동작 버튼(키 등록 상태 자동 감지 → Register/Unregister 전환), 키 해제(`unregister_key`, `remote.write_authorized_keys`), 서버 무응답/주소 미입력 시 비활성화를 추가했다(Phase 1, 미릴리스). 감지는 `detect_key_status`가 `verify`의 reason(auth_failed/unreachable)으로 분류한다. `Verify Key Login` 버튼은 자동 감지로 대체하며 제거했다.
 - 2026-06-01: `Verify Key Login` 거짓 양성 버그 수정(미릴리스). 검증 ssh 명령에 `-F os.devnull`을 추가해 사용자 `~/.ssh/config`의 `IdentityFile` 주입을 막고 `-i`로 지정한 키만 격리 검증하도록 했다. 원격 `authorized_keys`엔 ed25519 1개만 있는데 RSA도 config의 ed25519로 붙어 성공처럼 보이던 문제였다.
 - 2026-06-01: 타이틀바에 실제 버전을 표시하도록 `app_assets.py`를 `importlib.metadata` 기반으로 바꾸고(`spec`에 `copy_metadata` 추가), `Verify Key Login` 버튼을 추가해 버전을 `0.3.1`로 올린 뒤 Release `v0.3.1`을 발행했다. 타이틀바 버전 해석 방식은 다중 에이전트 워크플로우로 dev/빌드 양쪽을 적대적 검증했다.
 - 2026-06-01: 검증/별칭 경고 기능을 담아 버전을 `0.3.0`으로 올리고 커밋·푸시한 뒤 GitHub Release `v0.3.0`을 발행했다.
