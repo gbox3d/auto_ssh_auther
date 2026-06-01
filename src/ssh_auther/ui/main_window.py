@@ -1,6 +1,8 @@
 """메인 GUI 윈도우."""
 
-from PySide6.QtCore import Qt, QThread, Signal, QTimer
+from pathlib import Path
+
+from PySide6.QtCore import Qt, QThread, Signal, QTimer, QStandardPaths
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -17,11 +19,13 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QDialog,
     QComboBox,
+    QCompleter,
     QDialogButtonBox,
     QFormLayout,
 )
 
 from ssh_auther.app_assets import WINDOW_TITLE, load_app_icon
+from ssh_auther.history import add_profile, load_history, save_history
 from ssh_auther.keys import find_public_keys, PublicKeyInfo, generate_key, delete_key, SUPPORTED_KEY_ALGORITHMS
 from ssh_auther.services.register import (
     register_key,
@@ -113,7 +117,11 @@ class MainWindow(QMainWindow):
         self._detect_timer.setInterval(600)
         self._detect_timer.timeout.connect(self._run_detection)
 
+        self._history_path = self._compute_history_path()
+        self._history = load_history(self._history_path)
+
         self._build_ui()
+        self._refresh_host_combo()
         self._load_keys()
 
     def _build_ui(self):
@@ -150,11 +158,18 @@ class MainWindow(QMainWindow):
         server_group = QGroupBox("서버 접속 정보")
         server_layout = QVBoxLayout(server_group)
 
-        # Host
+        # Host (이전 접속 주소 기억 + 자동완성)
         row1 = QHBoxLayout()
         row1.addWidget(QLabel("Host:"))
-        self.input_host = QLineEdit()
-        self.input_host.setPlaceholderText("예: 192.168.1.100")
+        self.input_host = QComboBox()
+        self.input_host.setEditable(True)
+        self.input_host.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.input_host.lineEdit().setPlaceholderText("예: 192.168.1.100")
+        host_completer = self.input_host.completer()
+        host_completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+        host_completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        host_completer.setFilterMode(Qt.MatchFlag.MatchContains)
+        self.input_host.textActivated.connect(self._on_host_selected)
         row1.addWidget(self.input_host)
         server_layout.addLayout(row1)
 
@@ -216,7 +231,7 @@ class MainWindow(QMainWindow):
 
         # 키 선택/서버 입력이 바뀌면 등록 상태를 자동 감지
         self.key_list.currentRowChanged.connect(self._schedule_detection)
-        self.input_host.textChanged.connect(self._schedule_detection)
+        self.input_host.currentTextChanged.connect(self._schedule_detection)
         self.input_username.textChanged.connect(self._schedule_detection)
         self.input_port.valueChanged.connect(self._schedule_detection)
 
@@ -242,7 +257,7 @@ class MainWindow(QMainWindow):
         return self._keys[row]
 
     def _get_server_info(self) -> tuple[str, int, str, str] | None:
-        host = self.input_host.text().strip()
+        host = self.input_host.currentText().strip()
         port = self.input_port.value()
         username = self.input_username.text().strip()
         password = self.input_password.text()
@@ -258,6 +273,44 @@ class MainWindow(QMainWindow):
             return None
 
         return host, port, username, password
+
+    # --- 접속 주소 이력 (Phase 2) ---
+    def _compute_history_path(self) -> Path:
+        base = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppConfigLocation)
+        if not base:
+            base = str(Path.home() / ".auto_ssh_auther")
+        return Path(base) / "history.json"
+
+    def _refresh_host_combo(self):
+        """현재 입력 텍스트는 유지한 채 콤보 항목을 이력으로 다시 채운다."""
+        current = self.input_host.currentText()
+        self.input_host.blockSignals(True)
+        self.input_host.clear()
+        self.input_host.addItems([p.host for p in self._history])
+        self.input_host.setCurrentText(current)
+        self.input_host.blockSignals(False)
+
+    def _on_host_selected(self, text: str):
+        """이력에서 host를 고르면 port/user를 자동으로 채운다."""
+        for profile in self._history:
+            if profile.host == text:
+                self.input_port.setValue(profile.port)
+                self.input_username.setText(profile.user)
+                break
+
+    def _remember_current_target(self):
+        """현재 host/port/user를 이력에 저장한다(비밀번호는 저장하지 않는다)."""
+        host = self.input_host.currentText().strip()
+        port = self.input_port.value()
+        username = self.input_username.text().strip()
+        if not host or not username:
+            return
+        self._history = add_profile(self._history, host, port, username)
+        try:
+            save_history(self._history_path, self._history)
+        except OSError:
+            pass
+        self._refresh_host_combo()
 
     def _set_busy(self, busy: bool):
         self._busy = busy
@@ -334,6 +387,8 @@ class MainWindow(QMainWindow):
     def _on_test_done(self, result):
         success, message = result
         self._log(message)
+        if success:
+            self._remember_current_target()
         self._set_busy(False)
         self._schedule_detection()
 
@@ -346,7 +401,7 @@ class MainWindow(QMainWindow):
             return
 
         key = self._get_selected_key()
-        host = self.input_host.text().strip()
+        host = self.input_host.currentText().strip()
         username = self.input_username.text().strip()
         if not key or not host or not username:
             self._detect_timer.stop()
@@ -360,7 +415,7 @@ class MainWindow(QMainWindow):
         if self._busy:
             return
         key = self._get_selected_key()
-        host = self.input_host.text().strip()
+        host = self.input_host.currentText().strip()
         port = self.input_port.value()
         username = self.input_username.text().strip()
         if not key or not host or not username:
@@ -433,6 +488,8 @@ class MainWindow(QMainWindow):
     def _on_unregister_done(self, result):
         ok, message = result
         self._log(f"{'[성공]' if ok else '[실패]'} {message}")
+        if ok:
+            self._remember_current_target()
         self._set_busy(False)
         self._schedule_detection()
 
@@ -462,5 +519,7 @@ class MainWindow(QMainWindow):
             self._log(f"[안내] {message}")
         else:
             self._log(f"[실패] {message}")
+        if status in (RegisterResult.SUCCESS, RegisterResult.ALREADY_EXISTS):
+            self._remember_current_target()
         self._set_busy(False)
         self._schedule_detection()

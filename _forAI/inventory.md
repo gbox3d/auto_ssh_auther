@@ -29,7 +29,8 @@
 - `src/ssh_auther/services/register.py`: 접속 테스트, 중복 검사, 사용자 메시지 변환, 등록 흐름 제어
 - `src/ssh_auther/ssh/remote.py`: Paramiko 기반 SSH 연결, `authorized_keys` 읽기/추가, `known_hosts` 처리
 - `src/ssh_auther/ssh/local_config.py`: 로컬 `~/.ssh/config` Host 블록 추가/갱신, 별칭 충돌 감지(`find_alias_collisions`)
-- `src/ssh_auther/ssh/verify.py`: 시스템 `ssh`(BatchMode) 기반 키 전용 로그인 검증
+- `src/ssh_auther/ssh/verify.py`: 시스템 `ssh`(BatchMode) 기반 키 전용 로그인 검증(`-F os.devnull`로 config 격리, reason 분류)
+- `src/ssh_auther/history.py`: 접속 프로파일(host/port/user) 저장/로드(비밀번호 미저장, Qt 비의존)
 
 ## 실행 및 빌드 엔트리포인트
 
@@ -61,8 +62,10 @@
   - 변경 없음 상태 유지
   - 같은 서버를 가리키는 IdentityFile 없는 별칭 감지(`find_alias_collisions`)
 - `tests/test_verify.py`
-  - 키 전용 ssh 검증 명령 구성
-  - ssh 미설치/성공/실패/타임아웃 메시지 처리
+  - 키 전용 ssh 검증 명령 구성(`-F` config 격리 포함)
+  - ssh 미설치/성공/실패/타임아웃 처리 + 실패 분류(auth_failed/unreachable)
+- `tests/test_history.py`
+  - 접속 프로파일 저장/로드 라운드트립, host 기준 dedup·최신순·길이 제한, 비번 미저장
 
 ## 현재 파악된 공백
 

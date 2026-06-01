@@ -6,6 +6,7 @@
 - 선택한 키의 서버 등록 상태를 자동 감지(키 선택/서버 입력 변경 시 디바운스)해, 버튼 하나가 상황에 따라 **Register / Unregister** 로 전환되는 스마트 동작 버튼
 - 원격 `authorized_keys`에서 선택한 키를 제거하는 **Unregister(키 해제)** 기능
 - 서버 무응답·주소 미입력 시 동작 버튼 자동 비활성화 + 현재 상태 표시 라벨
+- 이전 접속 주소 기억 + Host 입력칸 자동완성(부분일치). 주소 선택 시 Port/User 자동 채움. host/port/user만 앱 설정폴더 JSON에 저장하며 **비밀번호는 저장하지 않음**
 
 ### Changed
 - `Verify Key Login` 버튼 제거 — 키 선택 시 등록 상태 자동 감지로 대체 (`Test Connection`은 유지)
