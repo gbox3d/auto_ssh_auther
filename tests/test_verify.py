@@ -1,3 +1,4 @@
+import os
 import subprocess
 import unittest
 from pathlib import Path
@@ -20,6 +21,9 @@ class BuildVerifyCommandTests(unittest.TestCase):
         self.assertIn("BatchMode=yes", command)
         self.assertIn("PreferredAuthentications=publickey", command)
         self.assertIn("IdentitiesOnly=yes", command)
+        # 사용자 ssh config를 무시해 -i로 지정한 키만 격리 검증 (config IdentityFile 거짓 양성 방지)
+        f = command.index("-F")
+        self.assertEqual(command[f + 1], os.devnull)
         self.assertEqual(command[-2:], ["gblab-dgx-01@192.168.0.220", "true"])
         i = command.index("-i")
         self.assertEqual(command[i + 1], str(Path("/home/u/.ssh/id_ed25519_admin")))

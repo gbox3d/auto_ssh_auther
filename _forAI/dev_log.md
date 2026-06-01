@@ -2,6 +2,7 @@
 
 ## Entries
 
+- 2026-06-01: `Verify Key Login` 거짓 양성 버그 수정(미릴리스). 검증 ssh 명령에 `-F os.devnull`을 추가해 사용자 `~/.ssh/config`의 `IdentityFile` 주입을 막고 `-i`로 지정한 키만 격리 검증하도록 했다. 원격 `authorized_keys`엔 ed25519 1개만 있는데 RSA도 config의 ed25519로 붙어 성공처럼 보이던 문제였다.
 - 2026-06-01: 타이틀바에 실제 버전을 표시하도록 `app_assets.py`를 `importlib.metadata` 기반으로 바꾸고(`spec`에 `copy_metadata` 추가), `Verify Key Login` 버튼을 추가해 버전을 `0.3.1`로 올린 뒤 Release `v0.3.1`을 발행했다. 타이틀바 버전 해석 방식은 다중 에이전트 워크플로우로 dev/빌드 양쪽을 적대적 검증했다.
 - 2026-06-01: 검증/별칭 경고 기능을 담아 버전을 `0.3.0`으로 올리고 커밋·푸시한 뒤 GitHub Release `v0.3.0`을 발행했다.
 - 2026-06-01: 키 등록 후 실제 키 로그인 가능 여부를 시스템 `ssh`(BatchMode)로 자동 검증하는 기능을 추가했다(`ssh/verify.py`). 같은 서버를 가리키지만 `IdentityFile`이 없는 Host 별칭을 감지·경고하는 `find_alias_collisions`도 추가했다. 실제 사례(`gb-dgx-01` 별칭에 키 설정이 없어 계속 암호를 묻던 문제)를 진단·수정하면서 나온 기능이다.

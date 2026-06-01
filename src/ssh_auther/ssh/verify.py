@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -21,9 +22,16 @@ def build_verify_command(
     identity_file: Path,
     timeout: int = 8,
 ) -> list[str]:
-    """암호 폴백 없이 키 전용(BatchMode)으로 접속을 시도하는 ssh 명령을 만든다."""
+    """암호 폴백 없이 키 전용(BatchMode)으로 접속을 시도하는 ssh 명령을 만든다.
+
+    `-F os.devnull`로 사용자 `~/.ssh/config`를 무시한다. 그렇지 않으면 접속 호스트와
+    매칭되는 config 블록의 `IdentityFile`이 함께 시도되어, 지정한 키가 미등록이어도
+    config의 다른 키로 접속에 성공해 거짓 양성이 난다. config를 무시하면 `-i`로 지정한
+    그 키 하나만 검증된다(`IdentitiesOnly=yes`는 agent만 막고 config IdentityFile은 못 막는다).
+    """
     return [
         "ssh",
+        "-F", os.devnull,
         "-o", "BatchMode=yes",
         "-o", "PreferredAuthentications=publickey",
         "-o", "IdentitiesOnly=yes",

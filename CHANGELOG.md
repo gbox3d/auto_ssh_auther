@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Fixed
+- `Verify Key Login` 검증이 접속 호스트와 매칭되는 `~/.ssh/config` 블록의 `IdentityFile`까지 함께 시도해, 서버에 미등록인 키도 성공으로 표시되던 거짓 양성 수정. 검증 ssh 명령에 `-F os.devnull`을 추가해 사용자 config를 무시하고 `-i`로 지정한 키만 격리 검증한다.
+
 ## 0.3.1 - 2026-06-01
 
 ### Added
