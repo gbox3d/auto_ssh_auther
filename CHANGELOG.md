@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+## 0.3.1 - 2026-06-01
+
+### Added
+- 창 타이틀바에 실제 버전 표시 (예: `Auto SSH Auther v0.3.1`) — dev 실행과 PyInstaller 빌드 양쪽에서 패키지 메타데이터로 해석
+- `Verify Key Login` 버튼 추가 — 등록과 별개로 선택한 키로 암호 없이 접속되는지 즉시 검증
+
+### Changed
+- `app_assets.py`가 버전을 하드코딩(`v1`) 대신 `importlib.metadata`로 해석
+- 프로젝트 버전을 `0.3.1`로 갱신
+
+### Packaging
+- `auto_ssh_auther.spec`가 `copy_metadata`로 dist-info를 빌드 결과물에 포함해 빌드 본에서도 버전이 해석되도록 함
+
+### Fixed
+- 등록 단위 테스트가 실제 네트워크 접속을 시도하던 문제를 모킹으로 수정
+
+### Verified
+- `uv run python -m unittest discover -s tests -v`
+
 ## 0.3.0 - 2026-06-01
 
 ### Added

@@ -3,13 +3,21 @@
 from __future__ import annotations
 
 import sys
+from importlib.metadata import version
 from pathlib import Path
 
 from PySide6.QtGui import QIcon
 
 
+def _resolve_version() -> str:
+    try:
+        return f"v{version('auto-ssh-auther')}"
+    except Exception:
+        return "v0.0.0+unknown"
+
+
 APP_NAME = "Auto SSH Auther"
-APP_VERSION = "v1"
+APP_VERSION = _resolve_version()
 WINDOW_TITLE = f"{APP_NAME} {APP_VERSION}"
 WINDOWS_APP_ID = "com.gbworks.auto-ssh-auther"
 

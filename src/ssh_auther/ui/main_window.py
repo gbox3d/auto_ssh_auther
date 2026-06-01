@@ -23,7 +23,12 @@ from PySide6.QtWidgets import (
 
 from ssh_auther.app_assets import WINDOW_TITLE, load_app_icon
 from ssh_auther.keys import find_public_keys, PublicKeyInfo, generate_key, delete_key, SUPPORTED_KEY_ALGORITHMS
-from ssh_auther.services.register import register_key, test_connection, RegisterResult
+from ssh_auther.services.register import (
+    register_key,
+    run_key_login_verification,
+    test_connection,
+    RegisterResult,
+)
 
 
 class WorkerThread(QThread):
@@ -180,6 +185,10 @@ class MainWindow(QMainWindow):
         self.btn_register.clicked.connect(self._on_register_key)
         btn_layout.addWidget(self.btn_register)
 
+        self.btn_verify = QPushButton("Verify Key Login")
+        self.btn_verify.clicked.connect(self._on_verify_key)
+        btn_layout.addWidget(self.btn_verify)
+
         layout.addLayout(btn_layout)
 
         # --- 결과 출력 ---
@@ -231,9 +240,25 @@ class MainWindow(QMainWindow):
 
         return host, port, username, password
 
+    def _get_verify_target(self) -> tuple[str, int, str] | None:
+        """검증용 접속 대상. 키 전용 검증이므로 비밀번호는 받지 않는다."""
+        host = self.input_host.text().strip()
+        port = self.input_port.value()
+        username = self.input_username.text().strip()
+
+        if not host:
+            self._log("오류: 서버 주소를 입력하세요.")
+            return None
+        if not username:
+            self._log("오류: 사용자 이름을 입력하세요.")
+            return None
+
+        return host, port, username
+
     def _set_busy(self, busy: bool):
         self.btn_test.setEnabled(not busy)
         self.btn_register.setEnabled(not busy)
+        self.btn_verify.setEnabled(not busy)
         self.btn_reload.setEnabled(not busy)
         self.btn_generate.setEnabled(not busy)
         self.btn_delete.setEnabled(not busy)
@@ -303,6 +328,30 @@ class MainWindow(QMainWindow):
     def _on_test_done(self, result):
         success, message = result
         self._log(message)
+        self._set_busy(False)
+
+    # --- Verify Key Login ---
+    def _on_verify_key(self):
+        key_info = self._get_selected_key()
+        if not key_info:
+            self._log("오류: 검증할 공개키를 선택하세요.")
+            return
+
+        target = self._get_verify_target()
+        if not target:
+            return
+
+        self._set_busy(True)
+        self._log(f"키 로그인 검증 중... ({key_info.filename})")
+
+        self._worker = WorkerThread(run_key_login_verification, key_info, *target)
+        self._worker.finished.connect(self._on_verify_done)
+        self._worker.start()
+
+    def _on_verify_done(self, result):
+        ok, message = result
+        prefix = "[성공]" if ok else "[실패]"
+        self._log(f"{prefix} {message}")
         self._set_busy(False)
 
     # --- Register Key ---

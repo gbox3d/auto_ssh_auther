@@ -23,7 +23,7 @@
 
 - 이름: `auto_ssh_auther`
 - 경로: `D:\works\auto_ssh_auther`
-- 현재 버전: `0.3.0`
+- 현재 버전: `0.3.1`
 - 실행 방식: `uv run python main.py`
 - 빌드 방식: `uv sync --group build` 후 `uv run python build.py`
 

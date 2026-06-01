@@ -3,12 +3,15 @@
 from pathlib import Path
 import sys
 
+from PyInstaller.utils.hooks import copy_metadata
+
 
 project_root = Path(SPECPATH)
 runtime_datas = [
     (str(project_root / "icon_ssh_auther.ico"), "."),
     (str(project_root / "icon_ssh_auther.png"), "."),
 ]
+runtime_datas += copy_metadata("auto-ssh-auther")
 build_icon = project_root / ("icon_ssh_auther.ico" if sys.platform == "win32" else "icon_ssh_auther.png")
 
 a = Analysis(

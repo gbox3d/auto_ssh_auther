@@ -13,6 +13,7 @@
 - 프로젝트 버전을 `0.2.0`으로 올렸다.
 - `0.2.1`: `_forAI` 문서 세트를 정리하고 중복 계획 문서 `myplan.md`를 이 문서로 통합했다. GitHub Release(`v0.2.1`)와 빌드 zip을 발행했다.
 - `0.3.0`: 등록 직후 키 로그인 자동 검증(`ssh/verify.py`)과 별칭 충돌 경고(`find_alias_collisions`)를 추가했다. GitHub Release(`v0.3.0`) 발행.
+- `0.3.1`: 타이틀바에 실제 버전 표시(`importlib.metadata` + `spec` `copy_metadata`)와 `Verify Key Login` 버튼을 추가했다. GitHub Release(`v0.3.1`) 발행.
 
 ## 가까운 작업 후보
 

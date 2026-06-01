@@ -152,6 +152,18 @@ def register_key(
         return RegisterResult.FAILED, format_connection_error(exc)
 
 
+def run_key_login_verification(
+    key_info: PublicKeyInfo,
+    host: str,
+    port: int,
+    username: str,
+) -> tuple[bool, str]:
+    """선택한 키만으로(암호 없이) 서버 로그인이 되는지 검증한다."""
+    identity_file = private_key_path_from_public_key(key_info.path)
+    result = verify_key_login(host, port, username, identity_file)
+    return result.ok, result.message
+
+
 def test_connection(host: str, port: int, username: str, password: str) -> tuple[bool, str]:
     """서버 접속 테스트."""
     try:

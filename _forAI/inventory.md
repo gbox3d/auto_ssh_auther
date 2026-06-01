@@ -5,7 +5,7 @@
 - 이름: `auto_ssh_auther`
 - 경로: `D:\works\auto_ssh_auther`
 - 패키지 이름: `auto-ssh-auther`
-- 현재 버전: `0.3.0`
+- 현재 버전: `0.3.1`
 - Python 요구사항: `>=3.11`
 
 ## 최상위 구조
@@ -23,7 +23,7 @@
 
 ## 소스 구조
 
-- `src/ssh_auther/app_assets.py`: 앱 이름, 윈도우 제목, 아이콘 로딩, Windows App ID 설정
+- `src/ssh_auther/app_assets.py`: 앱 이름, 윈도우 제목, 아이콘 로딩, Windows App ID 설정, `importlib.metadata` 기반 버전 해석(타이틀바 표시)
 - `src/ssh_auther/ui/main_window.py`: 메인 윈도우, 키 생성 다이얼로그, 백그라운드 작업 스레드
 - `src/ssh_auther/keys/local_keys.py`: 로컬 공개키 탐색, 파싱, 생성, 삭제
 - `src/ssh_auther/services/register.py`: 접속 테스트, 중복 검사, 사용자 메시지 변환, 등록 흐름 제어
